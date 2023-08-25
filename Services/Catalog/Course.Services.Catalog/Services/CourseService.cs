@@ -19,7 +19,7 @@ namespace Course.Services.Catalog.Services
             var database = client.GetDatabase(databaseSettings.DatabaseName);
             _courseCollection = database.GetCollection<Models.Course>(databaseSettings.CourseCollectionName);
             _mapper = mapper;
-            _categoryCollection = database.GetCollection<Category>(databaseSettings.CategoryCollectionName); ;
+            _categoryCollection = database.GetCollection<Category>(databaseSettings.CategoryCollectionName);
         }
 
         public async Task<Response<List<CourseDto>>> GetAllAsync()
