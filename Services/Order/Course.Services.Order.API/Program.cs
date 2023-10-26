@@ -1,57 +1,55 @@
-using Course.Services.Basket.Services;
-using Course.Services.Basket.Settings;
+using Course.Services.Order.Application.Handlers;
+using Course.Services.Order.Infrastructure;
 using Course.Shared.Services;
+using MediatR;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using Microsoft.Extensions.Options;
+using Microsoft.EntityFrameworkCore;
 using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
-var requireAutorizePolicy= new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
+// Add services to the container.
+var requireAutorizePolicy = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build();
 
 JwtSecurityTokenHandler.DefaultInboundClaimTypeMap.Remove("sub");
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
 {
     options.Authority = builder.Configuration["IdentityServerURL"];
-    options.Audience = "resource_basket";
+    options.Audience = "resource_order";
     options.RequireHttpsMetadata = false;
 });
 
-builder.Services.AddHttpContextAccessor();
-builder.Services.AddScoped<ISharedIdentityService, SharedIdentityService>();    
-builder.Services.AddSingleton<RedisService>(sp =>
+builder.Services.AddDbContext<OrderDbContext>(opt =>
 {
-    var redisSettings = sp.GetRequiredService<IOptions<RedisSettings>>().Value;
-    var redis = new RedisService(redisSettings.Port, redisSettings.Host);
-    redis.Connect();
-    return redis;
+    opt.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"), configure =>
+    {
+        configure.MigrationsAssembly("Course.Services.Order.Infrastructure");
+    });
 });
-builder.Services.AddScoped<IBasketService, BasketService>();
+
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ISharedIdentityService,SharedIdentityService>();
+
+builder.Services.AddMediatR(typeof(CreateOrderCommadHandler).Assembly);
+
 builder.Services.AddControllers(opt =>
 {
     opt.Filters.Add(new AuthorizeFilter(requireAutorizePolicy));
 });
+// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-
-builder.Services.Configure<RedisSettings>(builder.Configuration.GetSection("RedisSettings"));
-
-
-
-
-
-
 var app = builder.Build();
 
+// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
 }
-
 app.UseAuthentication();
 app.UseAuthorization();
 
