@@ -1,3 +1,4 @@
+using Course.Services.Catalog.Dtos;
 using Course.Services.Catalog.Services;
 using Course.Services.Catalog.Settings;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -48,5 +49,17 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+using (var scope=app.Services.CreateScope())
+{
+    var serviceProvider = scope.ServiceProvider;
+    var categoryService = serviceProvider.GetRequiredService<ICategoryService>();
+
+    if (!categoryService.GetAllAsync().Result.Data.Any())
+    {
+        categoryService.CreateAsync(new CategoryDto { Name = "Asp.Net Core Kursu" }).Wait();
+        categoryService.CreateAsync(new CategoryDto { Name = "Asp.Net Core API Kursu" }).Wait();
+    }
+}
 
 app.Run();
